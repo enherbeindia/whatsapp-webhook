@@ -11,6 +11,10 @@ const VERIFY_TOKEN = "ENHERBE_SECRET_12345";
 const GA_MEASUREMENT_ID = process.env.GA_MEASUREMENT_ID || "G-XXXXXXXXXX"; 
 const GA_API_SECRET = process.env.GA_API_SECRET || "YOUR_GA4_API_SECRET"; 
 
+// Meta CAPI Configuration (Pulls from Render Environment Variables)
+const META_PIXEL_ID = process.env.META_PIXEL_ID || "YOUR_META_PIXEL_ID";
+const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN || "YOUR_META_ACCESS_TOKEN";
+
 // 1. GET Request: Handles Meta's Webhook Verification Handshake
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
@@ -46,7 +50,7 @@ app.post('/webhook', async (req, res) => {
                 const groupId = group?.group_id || value?.group_id || "test_group_id";
                 console.log(`NEW USER JOINED COMMUNITY: ${groupId}`);
                 
-                // Switched back to the LIVE production endpoint to record data in GA4
+                // 1. Send event to GA4
                 const gaResponse = await axios.post(
                   `https://www.google-analytics.com/mp/collect?measurement_id=${GA_MEASUREMENT_ID}&api_secret=${GA_API_SECRET}`,
                   {
@@ -61,13 +65,35 @@ app.post('/webhook', async (req, res) => {
                   }
                 );
                 console.log("GA4 Production Ping Status:", gaResponse.status);
+
+                // 2. Send event directly to Meta Conversions API (CAPI)
+                const metaResponse = await axios.post(
+                  `https://graph.facebook.com/v19.0/${META_PIXEL_ID}/events?access_token=${META_ACCESS_TOKEN}`,
+                  {
+                    data: [
+                      {
+                        event_name: "whatsapp_community_join",
+                        event_time: Math.floor(Date.now() / 1000),
+                        action_source: "website",
+                        custom_data: {
+                          group_id: groupId,
+                          method: "cloud_api_webhook"
+                        },
+                        user_data: {
+                          external_id: "whatsapp_user_" + Date.now()
+                        }
+                      }
+                    ]
+                  }
+                );
+                console.log("Meta CAPI Success Response:", metaResponse.data);
               }
             }
           }
         }
       }
     } catch (err) {
-      console.error("Webhook Processing or GA4 Ping Error:", err.response?.data || err.message);
+      console.error("Webhook Processing or API Ping Error:", err.response?.data || err.message);
     }
     return res.status(200).send('EVENT_RECEIVED');
   }
