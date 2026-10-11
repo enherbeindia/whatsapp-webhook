@@ -1,3 +1,30 @@
+const express = require('express');
+const axios = require('axios');
+const app = express();
+
+app.use(express.json());
+
+// Set your custom secret token (used for Meta Verification Handshake)
+const VERIFY_TOKEN = "ENHERBE_SECRET_12345";
+
+// GA4 Configuration (Pulls from Render Environment Variables)
+const GA_MEASUREMENT_ID = process.env.GA_MEASUREMENT_ID || "G-XXXXXXXXXX"; 
+const GA_API_SECRET = process.env.GA_API_SECRET || "YOUR_GA4_API_SECRET"; 
+
+// 1. GET Request: Handles Meta's Webhook Verification Handshake
+app.get('/webhook', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+    console.log("WEBHOOK_VERIFIED successfully.");
+    return res.status(200).send(challenge);
+  }
+  return res.sendStatus(403);
+});
+
+// 2. POST Request: Listens for WhatsApp Group/Community Join Events
 app.post('/webhook', async (req, res) => {
   const body = req.body;
   console.log("Incoming Webhook Payload:", JSON.stringify(body, null, 2));
@@ -45,3 +72,6 @@ app.post('/webhook', async (req, res) => {
   }
   return res.sendStatus(404);
 });
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
