@@ -46,8 +46,9 @@ app.post('/webhook', async (req, res) => {
                 const groupId = group?.group_id || value?.group_id || "test_group_id";
                 console.log(`NEW USER JOINED COMMUNITY: ${groupId}`);
                 
+                // Using the GA4 Debug Endpoint to print validation results in Render logs
                 const gaResponse = await axios.post(
-                  `https://www.google-analytics.com/mp/collect?measurement_id=${GA_MEASUREMENT_ID}&api_secret=${GA_API_SECRET}`,
+                  `https://www.google-analytics.com/debug/mp/collect?measurement_id=${GA_MEASUREMENT_ID}&api_secret=${GA_API_SECRET}`,
                   {
                     client_id: "whatsapp_user_" + Date.now(),
                     events: [{
@@ -59,7 +60,7 @@ app.post('/webhook', async (req, res) => {
                     }]
                   }
                 );
-                console.log("GA4 Conversion Fired Successfully! Status:", gaResponse.status);
+                console.log("GA4 Debug Response:", JSON.stringify(gaResponse.data, null, 2));
               }
             }
           }
